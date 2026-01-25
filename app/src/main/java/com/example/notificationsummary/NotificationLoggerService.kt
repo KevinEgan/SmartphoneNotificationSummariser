@@ -46,15 +46,27 @@ class NotificationLoggerService : NotificationListenerService() {
         val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
         val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
 
-        // Notification summary
+        // Notification summary log
+        /*
         Log.d(TAG, """
             App: ${sbn.packageName}
             Title: $title
             Text: $text
             BigText: $bigText
             SubText: $subText
+        """.trimIndent()) */
+
+        // Create NotificaionData object
+        val data = NotificationData(System.currentTimeMillis(),sbn.postTime,
+            sbn.packageName, title, text, bigText, subText, sbn.notification.category
+        )
+
+        // Log NotificationData for debugging (need to add it to a JSONL file later)
+        Log.d(TAG, """
+            NotificationData: $data
         """.trimIndent())
     }
+
 
     // This is a Logcat tag used to make filtering these messages easier & obvious looking
     private companion object {
