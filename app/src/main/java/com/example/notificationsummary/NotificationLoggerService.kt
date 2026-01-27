@@ -18,6 +18,10 @@ import android.util.Log
  */
 class NotificationLoggerService : NotificationListenerService() {
 
+    // Small hook to make this class/methods testable in the unit test class.
+    // If this is null (normal app behavior), we just Logcat it.
+    internal var notificationDataConsumer: ((NotificationData) -> Unit)? = null
+
     // Logs when the service is first created by the system
     override fun onCreate() {
         super.onCreate()
@@ -61,10 +65,15 @@ class NotificationLoggerService : NotificationListenerService() {
             sbn.packageName, title, text, bigText, subText, sbn.notification.category
         )
 
-        // Log NotificationData for debugging (need to add it to a JSONL file later)
-        Log.d(TAG, """
-            NotificationData: $data
-        """.trimIndent())
+        val consumer = notificationDataConsumer
+        if (consumer != null) {
+            consumer(data)
+        } else {
+            // Log NotificationData for debugging (need to add it to a JSONL file later)
+            Log.d(TAG, """
+                NotificationData: $data
+            """.trimIndent())
+        }
     }
 
 
