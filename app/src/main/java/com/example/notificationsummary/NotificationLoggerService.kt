@@ -21,7 +21,6 @@ class NotificationLoggerService : NotificationListenerService() {
     // Small hook to make this class/methods testable in the unit test class.
     // If this is null (normal app behavior), we just Logcat it.
     internal var notificationDataConsumer: ((NotificationData) -> Unit)? = null
-    val fileWriter = NotificationFileWrite("${filesDir}/notifications.jsonl")
 
     // Logs when the service is first created by the system
     override fun onCreate() {
@@ -42,6 +41,9 @@ class NotificationLoggerService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         // StatusBarNotification contains the notification data
+
+        val fileWriter = NotificationFileWrite("${filesDir}/notifications.jsonl")
+        
         // The notification's "extras" bundle contains common fields (title/text/etc.).
         val extras = sbn.notification.extras
 
@@ -80,6 +82,6 @@ class NotificationLoggerService : NotificationListenerService() {
 
     // This is a Logcat tag used to make filtering these messages easier & obvious looking
     private companion object {
-        private const val TAG = "v*****NOTIF"
+        private const val TAG = "*****NOTIF"
     }
 }

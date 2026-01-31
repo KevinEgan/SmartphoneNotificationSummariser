@@ -1,6 +1,7 @@
 package com.example.notificationsummary
+import kotlinx.serialization.Serializable
 
-
+@Serializable
 // This class represents notifications and their data fields
 data class NotificationData(
     val capturedAtMs: Long,
