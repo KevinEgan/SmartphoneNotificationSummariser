@@ -72,10 +72,12 @@ class NotificationLoggerService : NotificationListenerService() {
         if (consumer != null) {
             consumer(data)
         } else {
-            // Log NotificationData for debugging (need to add it to a JSONL file later)
+            // Log NotificationData for debugging
             Log.d(TAG, """
                 NotificationData: $data
             """.trimIndent())
+            // Write NotificationData to JSONL file
+            fileWriter.writeToFile(data)
         }
     }
 
