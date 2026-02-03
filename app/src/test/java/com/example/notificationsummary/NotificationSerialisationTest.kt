@@ -2,6 +2,9 @@ package com.example.notificationsummary
 
 import org.junit.Test
 import org.junit.Assert.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
 
 class NotificationSerialisationTest {
 
@@ -25,6 +28,25 @@ class NotificationSerialisationTest {
         assertTrue(json.contains("\"packageName\":\"com.example.app\""))
         assertTrue(json.contains("\"title\":\"Test Title\""))
         assertValidJson(json)
+    }
+
+    @Test
+    fun testSerialisationAndDeserialisation(){
+        val data = NotificationData(
+            capturedAtMs = 1234567890L,
+            postTimeMs = 1234567800L,
+            packageName = "com.example.app",
+            title = "Test Title",
+            text = "Test Text",
+            bigText = "Test Big Text",
+            subText = "Test Sub Text",
+            category = "msg"
+        )
+
+        val serialisedData = serialiseNotificationData(data)
+        val deserialisedData = deserialiseNotificationData(serialisedData)
+
+        assertEquals(data, deserialisedData)
     }
 
     @Test
@@ -155,12 +177,13 @@ class NotificationSerialisationTest {
         assertEquals(openBraces, closeBraces)
     }
 
-    // stub functions - need to implement these
     private fun serialiseNotificationData(data: NotificationData): String {
-        TODO("Not yet implemented")
+        val dataToJson = Json.encodeToString(data)
+        return dataToJson
     }
 
     private fun deserialiseNotificationData(jsonString: String): NotificationData {
-        TODO("Not yet implemented")
+        val dataFromJson = Json.decodeFromString<NotificationData>(jsonString)
+        return dataFromJson
     }
 }
