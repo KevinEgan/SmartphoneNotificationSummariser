@@ -9,11 +9,22 @@ class NotificationFileWrite(private val filePath: String) {
 
 
     fun writeToFile(data: NotificationData ){
-        val file = File(filePath)
-        val dataToJson = serialiseNotificationData(data)
-        BufferedWriter(FileWriter(file, true)).use { writer ->
-            writer.write(dataToJson)
-            writer.newLine()
+        try {
+            val file = File(filePath)
+            android.util.Log.d("NotificationFileWrite", "File path: $filePath")
+            android.util.Log.d("NotificationFileWrite", "File exists: ${file.exists()}")
+            android.util.Log.d("NotificationFileWrite", "Parent dir exists: ${file.parentFile?.exists()}")
+            
+            val dataToJson = serialiseNotificationData(data)
+            android.util.Log.d("NotificationFileWrite", "Serialized data: $dataToJson")
+            
+            BufferedWriter(FileWriter(file, true)).use { writer ->
+                writer.write(dataToJson)
+                writer.newLine()
+            }
+            android.util.Log.d("NotificationFileWrite", "Write completed successfully")
+        } catch (error: Exception) {
+            android.util.Log.d("NotificationFileWrite", "Error writing to file", error)
         }
     }
     fun closeFile(){

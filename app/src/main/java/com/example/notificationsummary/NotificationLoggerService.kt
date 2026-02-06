@@ -77,7 +77,13 @@ class NotificationLoggerService : NotificationListenerService() {
                 NotificationData: $data
             """.trimIndent())
             // Write NotificationData to JSONL file
-            fileWriter.writeToFile(data)
+            try {
+                Log.d(TAG, "Attempting to write to file: ${filesDir}/notifications.jsonl")
+                fileWriter.writeToFile(data)
+                Log.d(TAG, "Successfully wrote notification to file")
+            } catch (error: Exception) {
+                Log.d(TAG, "Error writing notification to file", error)
+            }
         }
     }
 
