@@ -4,6 +4,7 @@ import android.app.Notification
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import android.app.NotificationManager
 
 /*
  This class implements NotificationListenerService. This service listens for notifications that
@@ -21,6 +22,10 @@ class NotificationLoggerService : NotificationListenerService() {
     // Small hook to make this class/methods testable in the unit test class.
     // If this is null (normal app behavior), we just Logcat it.
     internal var notificationDataConsumer: ((NotificationData) -> Unit)? = null
+
+    val notificationCategoriesToExclude = listOf( Notification.CATEGORY_TRANSPORT, Notification.CATEGORY_NAVIGATION,
+        Notification.CATEGORY_WORKOUT, Notification.CATEGORY_LOCATION_SHARING, Notification.CATEGORY_PROMO,
+        Notification.CATEGORY_STATUS, Notification.CATEGORY_STOPWATCH, Notification.CATEGORY_PROGRESS)
 
     // Logs when the service is first created by the system
     override fun onCreate() {
@@ -41,8 +46,27 @@ class NotificationLoggerService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         // StatusBarNotification contains the notification data
-
         val fileWriter = NotificationFileWrite("${filesDir}/notifications.jsonl")
+
+        // Ranking checks the level of importance of notification
+        val rankingMap = currentRanking ?:return
+        val ranking = Ranking()
+
+        if (!rankingMap.getRanking(sbn.key, ranking)){
+            return
+        }
+        if (ranking.importance == NotificationManager.IMPORTANCE_HIGH){
+            Log.d(TAG, "High importance notification found in ${sbn.packageName}")
+        }
+        if (ranking.importance< NotificationManager.IMPORTANCE_DEFAULT){
+            Log.d(TAG, "Low impotance notification found in ${sbn.packageName}. Ignored.")
+            return
+        }
+        if (sbn.notification.category in notificationCategoriesToExclude){
+            Log.d(TAG, "Banned category; ${sbn.notification.category} from ${sbn.packageName}. Ignored.")
+            return
+        }
+
         
         // The notification's "extras" bundle contains common fields (title/text/etc.).
         val extras = sbn.notification.extras
