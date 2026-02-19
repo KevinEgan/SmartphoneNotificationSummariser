@@ -7,6 +7,8 @@ data class NotificationData(
     val capturedAtMs: Long,
     val postTimeMs: Long,
     val packageName: String,
+    val groupKey: String? = null,
+    val isGroupSummary: Boolean = false,
     val title: String?,
     val text: String?,
     val bigText: String?,

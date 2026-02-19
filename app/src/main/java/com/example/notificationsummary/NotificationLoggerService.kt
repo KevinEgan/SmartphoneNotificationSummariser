@@ -87,9 +87,12 @@ class NotificationLoggerService : NotificationListenerService() {
             SubText: $subText
         """.trimIndent()) */
 
+        //isGroupSummary to filter out such messages like "139 messages from 2 chats" ie redundant info
+        val isGroupSummary = sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0
+
         // Create NotificaionData object
         val data = NotificationData(System.currentTimeMillis(),sbn.postTime,
-            sbn.packageName, title, text, bigText, subText, sbn.notification.category
+            sbn.packageName, sbn.groupKey,  isGroupSummary, title, text, bigText, subText, sbn.notification.category
         )
 
         val consumer = notificationDataConsumer
