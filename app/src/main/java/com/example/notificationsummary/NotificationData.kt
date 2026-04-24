@@ -7,6 +7,7 @@ data class NotificationData(
     val capturedAtMs: Long,
     val postTimeMs: Long,
     val packageName: String,
+    val chatId: String? = null,
     val groupKey: String? = null,
     val isGroupSummary: Boolean = false,
     val title: String?,

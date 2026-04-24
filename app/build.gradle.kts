@@ -4,6 +4,15 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+import java.util.Properties
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use { load(it) }
+    }
+}
+
 android {
     namespace = "com.example.notificationsummary"
     compileSdk {
@@ -18,6 +27,11 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val hfApiToken = (localProperties.getProperty("HF_API_TOKEN") ?: "")
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+        buildConfigField("String", "HF_API_TOKEN", "\"$hfApiToken\"")
     }
 
     buildTypes {
@@ -35,6 +49,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     testOptions {
@@ -55,6 +70,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation("com.google.code.gson:gson:2.10.1")
     implementation(libs.kotlinx.serialization.json)
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.18.0")
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     androidTestImplementation(libs.androidx.junit)

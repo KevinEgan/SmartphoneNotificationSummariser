@@ -23,6 +23,10 @@ class NotificationLoggerService : NotificationListenerService() {
     // If this is null (normal app behavior), we just Logcat it.
     internal var notificationDataConsumer: ((NotificationData) -> Unit)? = null
 
+    // Chat batch manager for grouping notifications by chatId
+    private lateinit var batchManager: ChatBatchManager
+    private lateinit var localOnnxSummariser: LocalOnnxSummariser
+
     val notificationCategoriesToExclude = listOf( Notification.CATEGORY_TRANSPORT, Notification.CATEGORY_NAVIGATION,
         Notification.CATEGORY_WORKOUT, Notification.CATEGORY_LOCATION_SHARING, Notification.CATEGORY_PROMO,
         Notification.CATEGORY_STATUS, Notification.CATEGORY_STOPWATCH, Notification.CATEGORY_PROGRESS)
@@ -30,6 +34,8 @@ class NotificationLoggerService : NotificationListenerService() {
     // Logs when the service is first created by the system
     override fun onCreate() {
         super.onCreate()
+        batchManager = ChatBatchManager(maxLocalChars = 2000)
+        localOnnxSummariser = LocalOnnxSummariser(this)
         Log.d(TAG, "Service created")
     }
 
@@ -39,12 +45,11 @@ class NotificationLoggerService : NotificationListenerService() {
         Log.d(TAG, "Notification listener connected")
     }
 
-    override fun onListenerDisconnected() {
-        Log.d(TAG, "Notification listener disconnected")
-        super.onListenerDisconnected()
-    }
-
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        // To simplify the project, only dealing with Whatsapp notifications;
+        if (sbn.packageName != "com.whatsapp"){
+            return
+        }
         // StatusBarNotification contains the notification data
         val fileWriter = NotificationFileWrite("${filesDir}/notifications.jsonl")
 
@@ -72,27 +77,41 @@ class NotificationLoggerService : NotificationListenerService() {
         val extras = sbn.notification.extras
 
         // Pull out common text fields. NUll checks here incase a field should be missing.
-        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+        val rawTitle = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
         val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
         val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
         val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
+        //val isGroupChat = extras.getCharSequence(Notification.EXTRA_IS_GROUP_CONVERSATION)?.toString()
+
+        // Extract and clean Chat ID from title
+        val chatId = extractChatId(rawTitle)
 
         // Notification summary log
         /*
         Log.d(TAG, """
             App: ${sbn.packageName}
-            Title: $title
+            Title: $rawTitle
             Text: $text
             BigText: $bigText
             SubText: $subText
         """.trimIndent()) */
 
-        //isGroupSummary to filter out such messages like "139 messages from 2 chats" ie redundant info
+        // isGroupSummary to filter out such messages like "139 messages from 2 chats" ie redundant info
         val isGroupSummary = sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0
 
         // Create NotificaionData object
-        val data = NotificationData(System.currentTimeMillis(),sbn.postTime,
-            sbn.packageName, sbn.groupKey,  isGroupSummary, title, text, bigText, subText, sbn.notification.category
+        val data = NotificationData(
+            capturedAtMs = System.currentTimeMillis(),
+            postTimeMs = sbn.postTime,
+            packageName = sbn.packageName,
+            chatId = chatId,
+            groupKey = sbn.groupKey,
+            isGroupSummary = isGroupSummary,
+            title = rawTitle,
+            text = text,
+            bigText = bigText,
+            subText = subText,
+            category = sbn.notification.category
         )
 
         val consumer = notificationDataConsumer
@@ -110,6 +129,59 @@ class NotificationLoggerService : NotificationListenerService() {
                 Log.d(TAG, "Successfully wrote notification to file")
             } catch (error: Exception) {
                 Log.d(TAG, "Error writing notification to file", error)
+            }
+        }
+
+        // Batch the notification by chat
+        if (data.chatId != null) {
+            val messageText = data.text ?: data.bigText ?: ""
+            val batchState = batchManager.appendMessage(data.chatId, messageText)
+            Log.d(TAG, """
+                Chat: ${batchState.chatId}
+                Chars: ${batchState.charCount} / 2000
+                Route: ${batchState.route}
+            """.trimIndent())
+        }
+    }
+
+    private fun extractChatId(title: String?): String? {
+        if (title == null) return null
+        // For the message, "Jim (3 messages): Replied to you", "Jim" is the chat name.
+        // We remove everything after the first colon (e.g., ": Replied to you")
+        var cleanTitle = title.split(":")[0]
+        
+        // Then remove the brackets to be left with the chat name
+        cleanTitle = cleanTitle.replace(Regex("\\s\\(\\d+\\smessage(s)?\\)"), "")
+        return cleanTitle.trim()
+    }
+
+    /**
+    In batch processing persist, flush, and clear are part of the workflow
+     Persist means that the batch is made to sit in memory
+     Flush is to write the batch into the database
+     Clear is to remove the batch from memory
+     */
+    fun flushAndPersistBatches() {
+        val allBatches = batchManager.getAllBatchStates()
+        val batchFileWriter = NotificationFileWrite("${filesDir}/chat_batches.jsonl")
+        val summaryFileWriter = NotificationFileWrite("${filesDir}/chat_summaries.jsonl")
+        for (batch in allBatches) {
+            try {
+                Log.d(TAG, "Current batch for chat: ${batch.chatId}, route: ${batch.route}")
+                batchFileWriter.writeToFile(batch)
+                val summaryText = localOnnxSummariser.summarise(batch.content) ?: ""
+
+                val summaryRecord = ChatSummaryRecord(
+                    chatId = batch.chatId,
+                    route = batch.route,
+                    sourceCharCount = batch.charCount,
+                    sourceText = batch.content,
+                    summaryText = summaryText,
+                    createdAtMs = System.currentTimeMillis()
+                )
+                summaryFileWriter.writeToFile(summaryRecord)
+            } catch (error: Exception) {
+                Log.d(TAG, "Error writing batch to file", error)
             }
         }
     }

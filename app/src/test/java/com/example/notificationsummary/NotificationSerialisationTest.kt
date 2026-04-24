@@ -2,11 +2,13 @@ package com.example.notificationsummary
 
 import org.junit.Test
 import org.junit.Assert.*
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
+import com.google.gson.Gson
 
 class NotificationSerialisationTest {
+
+    private val gson = Gson()
 
     @Test
     fun testBasicSerialisation() {
@@ -14,6 +16,7 @@ class NotificationSerialisationTest {
             capturedAtMs = 1234567890L,
             postTimeMs = 1234567800L,
             packageName = "com.example.app",
+            chatId = "Test Chat",
             title = "Test Title",
             text = "Test Text",
             bigText = "Test Big Text",
@@ -26,7 +29,7 @@ class NotificationSerialisationTest {
         assertNotNull(json)
         assertTrue(json.contains("\"capturedAtMs\":1234567890"))
         assertTrue(json.contains("\"packageName\":\"com.example.app\""))
-        assertTrue(json.contains("\"title\":\"Test Title\""))
+        assertTrue(json.contains("\"chatId\":\"Test Chat\""))
         assertValidJson(json)
     }
 
@@ -36,6 +39,7 @@ class NotificationSerialisationTest {
             capturedAtMs = 1234567890L,
             postTimeMs = 1234567800L,
             packageName = "com.example.app",
+            chatId = "Test Chat",
             title = "Test Title",
             text = "Test Text",
             bigText = "Test Big Text",
@@ -55,6 +59,7 @@ class NotificationSerialisationTest {
             capturedAtMs = 1234567890L,
             postTimeMs = 1234567800L,
             packageName = "com.example.app",
+            chatId = "Chat \"Quote\"",
             title = "Message from \"John\"",
             text = "He said \"Hello!\"",
             bigText = null,
@@ -65,7 +70,7 @@ class NotificationSerialisationTest {
         val json = serialiseNotificationData(data)
 
         assertValidJson(json)
-        // quotes need to be escaped or it breaks
+        // Gson handles escaping
         assertTrue(json.contains("\\\""))
     }
 
@@ -75,6 +80,7 @@ class NotificationSerialisationTest {
             capturedAtMs = 1234567890L,
             postTimeMs = 1234567800L,
             packageName = "com.example.app",
+            chatId = "Special",
             title = "Line 1\nLine 2",
             text = "Tab\there\nNewline\rCarriage return",
             bigText = "Backslash: \\ Forward slash: /",
@@ -96,6 +102,7 @@ class NotificationSerialisationTest {
             capturedAtMs = 1234567890L,
             postTimeMs = 1234567800L,
             packageName = "com.example.app",
+            chatId = null,
             title = null,
             text = null,
             bigText = null,
@@ -106,8 +113,8 @@ class NotificationSerialisationTest {
         val json = serialiseNotificationData(data)
 
         assertValidJson(json)
-        // TODO: check if nulls should be omitted or set to null value
-        assertTrue(json.contains("\"title\":null") || !json.contains("\"title\""))
+        // Looks as though Gson sorts out null values
+        assertFalse(json.contains("\"title\""))
     }
 
     @Test
@@ -116,6 +123,7 @@ class NotificationSerialisationTest {
             capturedAtMs = 1234567890L,
             postTimeMs = 1234567800L,
             packageName = "com.example.app",
+            chatId = "",
             title = "",
             text = "",
             bigText = "",
@@ -135,6 +143,7 @@ class NotificationSerialisationTest {
             capturedAtMs = 1234567890L,
             postTimeMs = 1234567800L,
             packageName = "com.example.app",
+            chatId = "Emoji 🦄",
             title = "Hello 👋",
             text = "Test 中文 العربية",
             bigText = "Emoji: 🎉🎊😀",
@@ -154,6 +163,7 @@ class NotificationSerialisationTest {
             capturedAtMs = 1234567890L,
             postTimeMs = 1234567800L,
             packageName = "com.example.app",
+            chatId = "Test Group",
             title = "Test",
             text = "Content with \"quotes\" and \nNewlines",
             bigText = null,
@@ -178,12 +188,10 @@ class NotificationSerialisationTest {
     }
 
     private fun serialiseNotificationData(data: NotificationData): String {
-        val dataToJson = Json.encodeToString(data)
-        return dataToJson
+        return gson.toJson(data)
     }
 
     private fun deserialiseNotificationData(jsonString: String): NotificationData {
-        val dataFromJson = Json.decodeFromString<NotificationData>(jsonString)
-        return dataFromJson
+        return gson.fromJson(jsonString, NotificationData::class.java)
     }
 }

@@ -8,7 +8,7 @@ class NotificationFileWrite(private val filePath: String) {
 
 
 
-    fun writeToFile(data: NotificationData ){
+    fun writeToFile(data: Any ){
         try {
             val file = File(filePath)
             android.util.Log.d("NotificationFileWrite", "File path: $filePath")
@@ -31,14 +31,9 @@ class NotificationFileWrite(private val filePath: String) {
         //I believe BufferedWriter takes care of this for me. Leaving this in as a placeholder for now just in case
     }
 
-    private fun serialiseNotificationData(data: NotificationData): String{
+    private fun serialiseNotificationData(data: Any): String{
         val gson = Gson()
         val json = gson.toJson(data)
         return json
-    }
-    private fun deserialiseNotificationData(json: String): NotificationData{
-        val gson = Gson()
-        val deserialised = gson.fromJson(json, NotificationData::class.java)
-        return deserialised
     }
 }
